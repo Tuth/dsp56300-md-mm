@@ -1236,6 +1236,7 @@ namespace dsp56k
 			m_asm.mov(r32(shifter), r32(src));
 		}
 
+		// NORMF leaves C unchanged (FM 13-147): both arms pass _updateCarry = false.
 		If(m_block, m_blockRuntimeData,
 			[&](const asmjit::Label& _toFalse)
 			{
@@ -1244,14 +1245,14 @@ namespace dsp56k
 			},
 			[&]	// S[23] == 0: ASR
 			{
-				alu_asr(D, D, &shifter);
+				alu_asr(D, D, &shifter, 0, false);
 			},
 			[&]	// S[23] == 1: ASL by the negated count
 			{
 				m_asm.shl(r32(shifter), asmjit::Imm(8));
 				m_asm.neg(shifter);
 				m_asm.shr(r32(shifter), asmjit::Imm(8));
-				alu_asl(D, D, &shifter);
+				alu_asl(D, D, &shifter, 0, false);
 			},
 			true, true, true);
 	}

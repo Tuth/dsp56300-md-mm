@@ -126,6 +126,9 @@ namespace dsp56k
 
 	void JitBlockChain::create(const TWord _pc, bool _execute)
 	{
+		if(jitPcTraceEnabled())
+			std::fprintf(stderr, "[DSPJIT] jit=%p mode=%08x event=create pc=%06x execute=%u\n",
+				static_cast<void*>(&m_jit), m_mode.get(), _pc, _execute ? 1u : 0u);
 //		LOG("Create @ " << HEX(_pc));// << std::endl << cacheEntry.block->getDisasm());
 
 		ensureCacheSize(_pc);
@@ -291,6 +294,9 @@ namespace dsp56k
 
 	void JitBlockChain::recreate(const TWord _pc)
 	{
+		if(jitPcTraceEnabled())
+			std::fprintf(stderr, "[DSPJIT] jit=%p mode=%08x event=recreate pc=%06x\n",
+				static_cast<void*>(&m_jit), m_mode.get(), _pc);
 		// there is code, but the JIT block does not start at the PC position that we want to run. We need to throw the block away and regenerate
 //		LOG("Unable to jump into the middle of a block, destroying existing block & recreating from " << HEX(pc));
 		m_jit.destroyToRecreate(_pc);

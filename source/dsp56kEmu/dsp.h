@@ -106,6 +106,7 @@ namespace dsp56k
 		uint64_t						m_instructions = 0;
 		uint64_t						m_maxWaitInstructions = 0;	// cooperative WAIT bound; 0 = blocking
 		uint64_t						m_cycles = 0;
+		bool							m_countInterpreterCycles = false;	// JIT diagnostics/fallback only
 		ProcessingMode					m_processingMode = Default;
 		TInterruptFunc					m_interruptFunc;
 
@@ -306,6 +307,48 @@ namespace dsp56k
 			const auto op = fetchPC();
 
 			execOp(op);
+		}
+
+		ASMJIT_FORCE_INLINE void execInterpreterCounted() noexcept
+		{
+			if constexpr(g_useJIT)
+			{
+				if(m_opcodeCycleCache.empty())
+					m_opcodeCycleCache.assign(mem.sizeP(), 0);
+
+				const auto previous = m_countInterpreterCycles;
+				m_countInterpreterCycles = true;
+				execInterpreter();
+				m_countInterpreterCycles = previous;
+			}
+			else
+			{
+				execInterpreter();
+			}
+		}
+
+		ASMJIT_FORCE_INLINE void execInterpreterCountedNoInterrupt() noexcept
+		{
+			if constexpr(g_useJIT)
+			{
+				if(m_opcodeCache.empty())
+					clearOpcodeCache();
+				if(m_opcodeCycleCache.empty())
+					m_opcodeCycleCache.assign(mem.sizeP(), 0);
+
+				const auto previous = m_countInterpreterCycles;
+				m_countInterpreterCycles = true;
+				pcCurrentInstruction = reg.pc.toWord();
+				const auto op = fetchPC();
+				execOp(op);
+				m_countInterpreterCycles = previous;
+			}
+			else
+			{
+				pcCurrentInstruction = reg.pc.toWord();
+				const auto op = fetchPC();
+				execOp(op);
+			}
 		}
 
 		template<typename Ta, typename Tb> void execPeriph() noexcept

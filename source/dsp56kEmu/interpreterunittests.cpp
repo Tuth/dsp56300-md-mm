@@ -100,6 +100,36 @@ namespace dsp56k
 		{
 			// Normal JIT builds must not pay for the interpreter-only per-PC cache.
 			verify(dsp.m_opcodeCycleCache.empty());
+
+			dsp.resetHW();
+			TWord pc = 0x100;
+			pc = emitToMemory("rep #$4", pc);
+			emitToMemory("nop", pc);
+			dsp.setPC(0x100);
+			dsp.execInterpreter();
+			verify(dsp.getCycles() == 0);
+			verify(dsp.m_opcodeCycleCache.empty());
+
+			dsp.resetHW();
+			pc = 0x100;
+			pc = emitToMemory("rep #$4", pc);
+			emitToMemory("nop", pc);
+			dsp.setPC(0x100);
+			dsp.execInterpreterCounted();
+			verify(dsp.getCycles() == 9); // REP (5) + four NOPs (1 each)
+			verify(dsp.m_opcodeCycleCache.size() == dsp.memory().sizeP());
+			verify(dsp.m_opcodeCycleCache[0x100] != 0);
+			dsp.memWriteP(0x100, assembler.assemble("nop").word[0]);
+			verify(dsp.m_opcodeCycleCache[0x100] == 0);
+
+			dsp.resetHW();
+			pc = 0x100;
+			pc = emitToMemory("do #$5,>$104", pc);
+			pc = emitToMemory("nop", pc);
+			emitToMemory("nop", pc);
+			dsp.setPC(0x100);
+			dsp.execInterpreterCounted();
+			verify(dsp.getCycles() == 15); // DO (5) + five two-NOP iterations
 			return;
 		}
 

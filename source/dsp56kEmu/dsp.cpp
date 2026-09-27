@@ -414,6 +414,8 @@ namespace dsp56k
 
 			if constexpr(!g_useJIT)
 				m_cycles += getOpcodeCycles(currentOp);
+			else if(m_countInterpreterCycles)
+				m_cycles += getOpcodeCycles(currentOp);
 
 			if(g_traceSupported && pcCurrentInstruction == currentOp)
 				traceOp();
@@ -582,6 +584,8 @@ namespace dsp56k
 
 		if constexpr(!g_useJIT)
 			m_cycles += getOpcodeCycles(pcCurrentInstruction);
+		else if(m_countInterpreterCycles)
+			m_cycles += getOpcodeCycles(pcCurrentInstruction);
 
 		++m_instructions;
 
@@ -643,6 +647,8 @@ namespace dsp56k
 
 		if constexpr(!g_useJIT)
 			m_cycles += getOpcodeCycles(pcCurrentInstruction);
+		else if(m_countInterpreterCycles)
+			m_cycles += getOpcodeCycles(pcCurrentInstruction);
 
 		++m_instructions;
 
@@ -665,6 +671,8 @@ namespace dsp56k
 			(this->*func)(op);
 			++m_instructions;
 			if constexpr(!g_useJIT)
+				m_cycles += getOpcodeCycles(repeatedOpPC);
+			else if(m_countInterpreterCycles)
 				m_cycles += getOpcodeCycles(repeatedOpPC);
 //			traceOp();
 		}
@@ -1137,6 +1145,8 @@ namespace dsp56k
 			m_opcodeCache[_offset].op = &DSP::op_ResolveCache;
 		if constexpr(!g_useJIT)
 			m_opcodeCycleCache[_offset] = 0;
+		else if(_offset < m_opcodeCycleCache.size())
+			m_opcodeCycleCache[_offset] = 0;
 
 #if DSP56300_DEBUGGER
 		if(m_debugger)
@@ -1422,6 +1432,8 @@ namespace dsp56k
 		m_opcodeCache.resize(mem.sizeP(), {&DSP::op_ResolveCache});
 		if constexpr(!g_useJIT)
 			m_opcodeCycleCache.assign(mem.sizeP(), 0);
+		else if(!m_opcodeCycleCache.empty())
+			m_opcodeCycleCache.assign(mem.sizeP(), 0);
 	}
 
 	void DSP::clearOpcodeCache(const TWord _address)
@@ -1434,6 +1446,8 @@ namespace dsp56k
 		if(_address < m_opcodeCache.size())
 			m_opcodeCache[_address].op = &DSP::op_ResolveCache;
 		if constexpr(!g_useJIT)
+			m_opcodeCycleCache[_address] = 0;
+		else if(_address < m_opcodeCycleCache.size())
 			m_opcodeCycleCache[_address] = 0;
 		m_jit.notifyProgramMemWrite(_address);
 	}

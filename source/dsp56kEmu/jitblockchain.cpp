@@ -10,8 +10,25 @@
 #include "asmjit/core/jitruntime.h"
 #include "jitblockemitter.h"
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
 namespace dsp56k
 {
+	namespace
+	{
+		bool jitPcTraceEnabled()
+		{
+			static const bool enabled = []
+			{
+				const auto* const value = std::getenv("GEARMULATOR_MDMM_JIT_PC_TRACE");
+				return value != nullptr && std::strcmp(value, "0") != 0;
+			}();
+			return enabled;
+		}
+	}
+
 	void funcRun(JitDspPtr* _jit, TWord _pc) noexcept;
 	void funcCreate(JitDspPtr* _jit, TWord _pc) noexcept;
 	void funcRecreate(JitDspPtr* _jit, TWord _pc) noexcept;
@@ -166,6 +183,15 @@ namespace dsp56k
 
 	void JitBlockChain::notifyPMemWrite(const TWord _addr, const bool _isCurrentChain)
 	{
+		if(jitPcTraceEnabled())
+		{
+			const auto* block = _addr < m_jitCache.size() ? m_jitCache[_addr].block : nullptr;
+			if(block)
+				std::fprintf(stderr,
+					"[DSPJIT] jit=%p mode=%08x event=pmem-hit addr=%06x current=%u block=%06x len=%u\n",
+					static_cast<void*>(&m_jit), m_mode.get(), _addr,
+					_isCurrentChain ? 1u : 0u, block->getPCFirst(), block->getPMemSize());
+		}
 		destroy(_addr);
 		if(_isCurrentChain)
 			ensureFuncSize(_addr);
@@ -333,6 +359,10 @@ namespace dsp56k
 
 	JitBlockRuntimeData* JitBlockChain::emit(TWord _pc)
 	{
+		if(jitPcTraceEnabled())
+			std::fprintf(stderr, "[DSPJIT] jit=%p mode=%08x event=emit pc=%06x\n",
+				static_cast<void*>(&m_jit), m_mode.get(), _pc);
+
 		auto* emitter = m_jit.acquireEmitter(_pc);
 
 //		m_logger->addFlags(asmjit::FormatFlags::kHexImms | /*asmjit::FormatFlags::kHexOffsets |*/ asmjit::FormatFlags::kMachineCode);

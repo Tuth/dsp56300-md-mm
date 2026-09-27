@@ -8,12 +8,39 @@
 
 #include "asmjit/core/jitruntime.h"
 
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
 #define WAIT_FOR_PROFILER 0
 
 using namespace asmjit;
 
 namespace dsp56k
 {
+	namespace
+	{
+		bool jitPcTraceEnabled()
+		{
+			static const bool enabled = []
+			{
+				const auto* const value = std::getenv("GEARMULATOR_MDMM_JIT_PC_TRACE");
+				return value != nullptr && std::strcmp(value, "0") != 0;
+			}();
+			return enabled;
+		}
+
+		bool jitModeTraceEnabled()
+		{
+			static const bool enabled = []
+			{
+				const auto* const value = std::getenv("GEARMULATOR_MDMM_JIT_MODE_TRACE");
+				return value != nullptr && std::strcmp(value, "0") != 0;
+			}();
+			return enabled;
+		}
+	}
+
 #ifndef __ANDROID__
 	// TODO: a.equals(b) is not a constant expression, android toolchain says. Maybe it needs an update?
 	namespace
@@ -250,6 +277,22 @@ namespace dsp56k
 
 	void Jit::notifyProgramMemWrite(const TWord _offset)
 	{
+		if(jitPcTraceEnabled())
+		{
+			bool hit = false;
+			for(const auto& it : m_chains)
+			{
+				if(it.second->getBlock(_offset))
+				{
+					hit = true;
+					break;
+				}
+			}
+			if(hit)
+				std::fprintf(stderr, "[DSPJIT] jit=%p event=pmem-write addr=%06x chains=%zu\n",
+					static_cast<void*>(this), _offset, m_chains.size());
+		}
+
 		for (auto& it : m_chains)
 			it.second->notifyPMemWrite(_offset, it.second.get() == m_currentChain);
 
@@ -370,11 +413,16 @@ namespace dsp56k
 		if(m_currentChain && m_currentChain->getMode() == mode)
 			return;
 
+		const uint32_t oldMode = m_currentChain ? m_currentChain->getMode().get()
+			: JitDspMode::Uninitialized;
+
 //		LOG("DSP mode change to " << HEX(mode.get()));
 
 		const auto itExisting = m_chains.find(mode);
 
-		if(itExisting == m_chains.end())
+		const bool existing = itExisting != m_chains.end();
+
+		if(!existing)
 		{
 			m_currentChain = new JitBlockChain(*this, mode, m_maxUsedPAddress);
 			m_chains.insert(std::make_pair(mode, m_currentChain));
@@ -384,6 +432,12 @@ namespace dsp56k
 			m_currentChain = itExisting->second.get();
 			m_currentChain->setMaxUsedPAddress(m_maxUsedPAddress);
 		}
+
+		if(jitPcTraceEnabled() && (!existing || jitModeTraceEnabled()))
+			std::fprintf(stderr,
+				"[DSPJIT] jit=%p event=mode old=%08x new=%08x chain=%s chains=%zu\n",
+				static_cast<void*>(this), oldMode, mode.get(), existing ? "reuse" : "new",
+				m_chains.size());
 
 		m_dsp.setJitEntries(m_currentChain->getFuncs().data(), m_currentChain->getFuncs().size());
 	}

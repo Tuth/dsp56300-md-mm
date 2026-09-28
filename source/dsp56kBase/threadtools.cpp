@@ -230,10 +230,7 @@ namespace dsp56k
 
 	uint32_t ThreadTools::getCurrentThreadPriorityRaw()
 	{
-#ifdef _WIN32
-		const auto priority = ::GetThreadPriority(::GetCurrentThread());
-		return static_cast<uint32_t>(priority);
-#elif defined(__APPLE__)
+#ifdef __APPLE__
 		qos_class_t qos = QOS_CLASS_UNSPECIFIED;
 		pthread_get_qos_class_np(pthread_self(), &qos, nullptr);
 		return static_cast<uint32_t>(qos);
@@ -244,11 +241,7 @@ namespace dsp56k
 
 	void ThreadTools::setCurrentThreadPriorityRaw(uint32_t _raw)
 	{
-#ifdef _WIN32
-		const auto priority = static_cast<int32_t>(_raw);
-		if(priority != THREAD_PRIORITY_ERROR_RETURN)
-			::SetThreadPriority(::GetCurrentThread(), priority);
-#elif defined(__APPLE__)
+#ifdef __APPLE__
 		const auto qos = static_cast<qos_class_t>(_raw);
 		if(qos != QOS_CLASS_UNSPECIFIED)
 			pthread_set_qos_class_self_np(qos, 0);

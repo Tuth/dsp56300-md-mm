@@ -8,6 +8,8 @@
 
 #include "asmjit/core/jitruntime.h"
 
+#include "dsp56kBase/logging.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -22,22 +24,30 @@ namespace dsp56k
 	{
 		bool jitPcTraceEnabled()
 		{
+#if !DSP56K_DIAGNOSTIC_LOGGING
+			return false;
+#else
 			static const bool enabled = []
 			{
 				const auto* const value = std::getenv("GEARMULATOR_MDMM_JIT_PC_TRACE");
 				return value != nullptr && std::strcmp(value, "0") != 0;
 			}();
 			return enabled;
+#endif
 		}
 
 		bool jitModeTraceEnabled()
 		{
+#if !DSP56K_DIAGNOSTIC_LOGGING
+			return false;
+#else
 			static const bool enabled = []
 			{
 				const auto* const value = std::getenv("GEARMULATOR_MDMM_JIT_MODE_TRACE");
 				return value != nullptr && std::strcmp(value, "0") != 0;
 			}();
 			return enabled;
+#endif
 		}
 	}
 

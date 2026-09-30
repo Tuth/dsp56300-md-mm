@@ -6,6 +6,8 @@
 #include "jitprofilingsupport.h"
 #include "jitregtypes.h"
 
+#include "dsp56kBase/logging.h"
+
 namespace dsp56k
 {
 #ifdef HAVE_ARM64
@@ -43,7 +45,11 @@ namespace dsp56k
 	{
 		asmjit::CodeHolder codeHolder;
 		codeHolder.init(m_runtime.environment());
+#if DSP56K_DIAGNOSTIC_LOGGING
+		// asmjit only formats disassembly text when a logger is attached;
+		// release builds must not pay for (or emit) JIT code dumps.
 		codeHolder.setLogger(&m_logger);
+#endif
 		codeHolder.setErrorHandler(&m_errorHandler);
 
 		JitEmitter m_asm(&codeHolder);
@@ -247,7 +253,11 @@ namespace dsp56k
 	{
 		asmjit::CodeHolder codeHolder;
 		codeHolder.init(m_runtime.environment());
+#if DSP56K_DIAGNOSTIC_LOGGING
+		// asmjit only formats disassembly text when a logger is attached;
+		// release builds must not pay for (or emit) JIT code dumps.
 		codeHolder.setLogger(&m_logger);
+#endif
 		codeHolder.setErrorHandler(&m_errorHandler);
 
 		JitEmitter m_asm(&codeHolder);
@@ -398,7 +408,11 @@ namespace dsp56k
 	{
 		asmjit::CodeHolder codeHolder;
 		codeHolder.init(m_runtime.environment());
+#if DSP56K_DIAGNOSTIC_LOGGING
+		// asmjit only formats disassembly text when a logger is attached;
+		// release builds must not pay for (or emit) JIT code dumps.
 		codeHolder.setLogger(&m_logger);
+#endif
 		codeHolder.setErrorHandler(&m_errorHandler);
 
 		JitEmitter m_asm(&codeHolder);

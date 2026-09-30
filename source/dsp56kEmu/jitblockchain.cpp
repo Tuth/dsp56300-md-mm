@@ -10,6 +10,8 @@
 #include "asmjit/core/jitruntime.h"
 #include "jitblockemitter.h"
 
+#include "dsp56kBase/logging.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -20,12 +22,18 @@ namespace dsp56k
 	{
 		bool jitPcTraceEnabled()
 		{
+#if !DSP56K_DIAGNOSTIC_LOGGING
+			// Release purity (STATE v42): no trace string and no env lookup in
+			// a release binary.
+			return false;
+#else
 			static const bool enabled = []
 			{
 				const auto* const value = std::getenv("GEARMULATOR_MDMM_JIT_PC_TRACE");
 				return value != nullptr && std::strcmp(value, "0") != 0;
 			}();
 			return enabled;
+#endif
 		}
 	}
 

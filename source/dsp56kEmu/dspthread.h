@@ -72,7 +72,9 @@ namespace dsp56k
 
 		char m_mipsString[128]{0};
 
-		bool m_logToDebug = true;
+		// Release purity (STATE v42): the MIPS ticker string is diagnostic
+		// output; default OFF, opt in with setLogToDebug(true).
+		bool m_logToDebug = false;
 		bool m_logToStdout = false;
 	};
 }

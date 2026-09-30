@@ -16,14 +16,25 @@ namespace Logging
 #define LOGTOCONSOLE(ss)	{ Logging::g_logToConsole( (ss).str() ); }
 #define LOGTOFILE(ss)		{ Logging::g_logToFile( (ss).str() ); }
 
-#define LOG(S)																												\
-do																															\
-{																															\
-	std::stringstream __ss__logging_h;	__ss__logging_h << __func__ << "@" << __LINE__ << ": " << S;						\
-																															\
-	LOGTOCONSOLE(__ss__logging_h)																							\
-}																															\
+#if DSP56K_DIAGNOSTIC_LOGGING
+
+#define LOG(S)																					\
+do																									\
+{																									\
+	std::stringstream __ss__logging_h;	__ss__logging_h << __func__ << "@" << __LINE__ << ": " << S;				\
+																									\
+	LOGTOCONSOLE(__ss__logging_h)																			\
+}																									\
 while(false)
+
+#else
+
+// Release purity (STATE v42): operands are not evaluated, no stringstream is
+// built. This silences the measured release-plugin leaks: asmjit disassembly
+// dumps via AsmJitLogger::_log and the DSPThread MIPS ticker.
+#define LOG(S)	do {} while(false)
+
+#endif
 
 #define LOGF(S)																												\
 do																															\
@@ -41,7 +52,13 @@ while (false)
 // disabled form deliberately does not reference S, so stream operands are not
 // evaluated and no stringstream is constructed.
 #ifndef DSP56K_DIAGNOSTIC_LOGGING
+#ifdef GEARMULATOR_DIAGNOSTIC_LOGGING
+// STATE v42: the gearmulator tree forwards its single build switch into the
+// DSP submodule; a standalone DSP build stays quiet by default.
+#define DSP56K_DIAGNOSTIC_LOGGING GEARMULATOR_DIAGNOSTIC_LOGGING
+#else
 #define DSP56K_DIAGNOSTIC_LOGGING 0
+#endif
 #endif
 
 #if DSP56K_DIAGNOSTIC_LOGGING

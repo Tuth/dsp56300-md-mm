@@ -150,19 +150,24 @@ namespace dsp56k
 		CcrBatchUpdate bu(*this, static_cast<CCRMask>(CCR_N | CCR_C | CCR_V | CCR_Z));
 		DspValue d(m_block);
 		getALU1(d, ab);
+
+		// Shift the 64 bit register by the real count and read the carry at bit 24, where the last bit shifted
+		// out of the 24 bit value lands (DSP56300FM rev.5 LSL, rendered p.13-93: C = last bit shifted out of bit 47,
+		// cleared for a zero count). Adding 8 to reach the host carry only works for the immediate on a 32 bit
+		// register: the register count shifted all 64 bits, so the carry came from bit 56 - n, always zero.
+		// Ported from dsp56300 65406f8f.
 		if(_shiftAmount.isImm24())
 		{
-			m_asm.shl(r32(d.get()), _shiftAmount.imm24() + 8); // + 8 to use native carry flag
+			m_asm.shl(r64(d.get()), _shiftAmount.imm24());
 		}
 		else
 		{
 			ShiftReg s(m_block);
 			m_asm.mov(r32(s), r32(_shiftAmount.get()));
-			m_asm.add(r32(s), asmjit::Imm(8));	// + 8 to use native carry flag
 			m_asm.shl(r64(d.get()), s.get().r8());
 		}
-		ccr_update_ifCarry(CCRB_C);
-		m_asm.shr(r32(d.get()), 8);				// revert shift by 8
+		copyBitToCCR(d.get(), 24, CCRB_C);		// clear for a count of zero as well
+		m_asm.and_(r32(d.get()), asmjit::Imm(0xffffff));
 		ccr_update_ifZero(CCRB_Z);
 		copyBitToCCR(d.get(), 23, CCRB_N);
 //		ccr_clear(CCR_V);	already cleared above

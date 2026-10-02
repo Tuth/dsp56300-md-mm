@@ -51,12 +51,15 @@ namespace dsp56k
 			if(!m_disableCCRUpdates)
 			{
 				CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+				// signed overflow of the 56 bit result is signed overflow of the host word when left-aligned
 #ifdef HAVE_ARM64
 				m_asm.adds(alu, alu, _v);
+				ccr_update_ifCarry(CCRB_C);
+				ccr_vl_update_ifOverflow();
 #else
 				m_asm.add(alu, _v);
+				ccr_c_update_vl_ifOverflow();
 #endif
-				ccr_update_ifCarry(CCRB_C);
 			}
 			else
 			{
@@ -65,6 +68,9 @@ namespace dsp56k
 		}
 		else
 		{
+		const RegGP overflow(m_block);
+		m_asm.mov(overflow, alu);
+
 		m_asm.add(alu, _v);
 
 		if(!m_disableCCRUpdates)
@@ -73,7 +79,17 @@ namespace dsp56k
 
 			copyBitToCCR(alu, 56, CCRB_C);
 
-//			ccr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
+			// V: the sign of the result differs from the signs of both operands
+			{
+				const RegGP operand(m_block);
+				m_asm.mov(operand, _v);
+				m_asm.xor_(operand, alu.get());
+				m_asm.xor_(overflow, alu.get());
+				m_asm.and_(overflow, operand.get());
+			}
+			m_asm.shr(overflow, asmjit::Imm(55));
+			m_asm.and_(overflow, asmjit::Imm(1));
+			ccr_vl_update(overflow);
 		}
 		}
 
@@ -103,12 +119,14 @@ namespace dsp56k
 			if(!m_disableCCRUpdates)
 			{
 				CcrBatchUpdate bu(*this, CCR_C, CCR_V);
+				// signed overflow of the 56 bit result is signed overflow of the host word when left-aligned
 #ifdef HAVE_ARM64
 				m_asm.subs(alu, alu, _v);
 				ccr_update_ifNotCarry(CCRB_C);	// ARM carry means unsigned >=, inverted vs 56k/x64
+				ccr_vl_update_ifOverflow();
 #else
 				m_asm.sub(alu, _v);
-				ccr_update_ifCarry(CCRB_C);
+				ccr_c_update_vl_ifOverflow();
 #endif
 			}
 			else
@@ -118,6 +136,9 @@ namespace dsp56k
 		}
 		else
 		{
+		const RegGP overflow(m_block);
+		m_asm.mov(overflow, alu);
+
 		m_asm.sub(alu, _v);
 
 		if(!m_disableCCRUpdates)
@@ -126,7 +147,17 @@ namespace dsp56k
 
 			copyBitToCCR(alu, 56, CCRB_C);
 
-//			ccr_clear(CCR_V); batch cleared
+			// V: the operands differ in sign and the result does not share the sign of the minuend
+			{
+				const RegGP operand(m_block);
+				m_asm.mov(operand, overflow.get());
+				m_asm.xor_(operand, _v);
+				m_asm.xor_(overflow, alu.get());
+				m_asm.and_(overflow, operand.get());
+			}
+			m_asm.shr(overflow, asmjit::Imm(55));
+			m_asm.and_(overflow, asmjit::Imm(1));
+			ccr_vl_update(overflow);
 		}
 		}
 
@@ -412,16 +443,22 @@ namespace dsp56k
 			alu_abs(_v);
 		}
 
-		// C and V are both cleared. Only C is updated as V is cleared always
+		// C comes from the borrow. V is a signed overflow of the 56 bit difference, which with both operands in
+		// ALU alignment is signed overflow of the host word. CMPM compares magnitudes and leaves V clear.
 		{
 			CcrBatchUpdate u(*this, static_cast<CCRMask>(CCR_C | CCR_V));
 
 #ifdef HAVE_ARM64
 			m_asm.subs(d, d, _v);
 			ccr_update_ifNotCarry(CCRB_C);		// we, THAT is unexpected: On ARM, carry means unsigned >= while it means unsigned < on 56k and intel
+			if(!_magnitude)
+				ccr_vl_update_ifOverflow();
 #else
 			m_asm.sub(d, _v);
-			ccr_update_ifCarry(CCRB_C);
+			if(_magnitude)
+				ccr_update_ifCarry(CCRB_C);
+			else
+				ccr_c_update_vl_ifOverflow();
 #endif
 		}
 

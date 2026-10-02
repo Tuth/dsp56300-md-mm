@@ -78,12 +78,18 @@ namespace dsp56k
 
 		const auto carry = int(res < d64);	// carry out of the accumulator = 64-bit unsigned overflow
 
+		// V: the sign of the result differs from the signs of both operands, which left-aligned is signed overflow
+		// of the 64 bit sum (DSP56300FM rev.5 p.13-7 ADD; Table 5-1 p.5-16: V = overflow of the 56 bit result,
+		// p.5-14: L is set if V is set).
+		constexpr auto signBit = static_cast<uint64_t>(1) << (55 + g_aluShift);
+		const bool overflow = ((res ^ d64) & (res ^ static_cast<uint64_t>(_val.var)) & signBit) != 0;
+
 		// S L E U N Z V C
 
 		sr_z_update(d);
 		sr_toggle(CCRB_C, Bit(carry));
-		sr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
-//		sr_l_update_by_v();
+		sr_toggle(CCR_V, overflow);
+		sr_l_update_by_v();
 
 //		sr_s_update();
 //		sr_e_update(d);
@@ -127,8 +133,10 @@ namespace dsp56k
 		aluMask(d);
 
 		sr_z_update(d);
-		sr_clear(CCR_V);		// as cmp is identical to sub, the same for the V bit applies (see sub for details)
-		//sr_l_update_by_v();
+		// V as for SUB (DSP56300FM rev.5 p.13-45 CMP). CMPM compares magnitudes and leaves V clear.
+		constexpr auto signBit = static_cast<uint64_t>(1) << (55 + g_aluShift);
+		sr_toggle(CCR_V, !_magnitude && ((d64 ^ val) & (d64 ^ res) & signBit) != 0);
+		sr_l_update_by_v();
 		sr_toggle(CCR_C, carry);
 
 		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
@@ -150,12 +158,16 @@ namespace dsp56k
 		d.var = res;
 		aluMask(d);
 
+		// V: the operands differ in sign and the result does not share the sign of the minuend
+		constexpr auto signBit = static_cast<uint64_t>(1) << (55 + g_aluShift);
+		const bool overflow = ((d64 ^ static_cast<uint64_t>(_val.var)) & (d64 ^ res) & signBit) != 0;
+
 		// S L E U N Z V C
 		sr_toggle(CCR_C, carry);
-		sr_clear(CCR_V);						// I did not manage to make the ALU overflow in the simulator, apparently that SR bit is only used for other ops
+		sr_toggle(CCR_V, overflow);
+		sr_l_update_by_v();
 
 		sr_z_update(d);
-		//sr_l_update_by_v();
 		setCCRDirty(ab, d, CCR_E | CCR_U | CCR_N);
 	}
 

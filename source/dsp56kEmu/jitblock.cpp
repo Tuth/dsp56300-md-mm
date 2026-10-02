@@ -270,6 +270,7 @@ namespace dsp56k
 		auto& childAddr = _rt.m_child;
 
 		m_chain = _chain;
+		m_coldCode.clear();
 
 		const bool isFastInterrupt = _pc < Vba_End;
 		const auto fastInterruptMode = isFastInterrupt ? (m_config.dynamicFastInterrupts ? JitOps::FastInterruptMode::Dynamic : JitOps::FastInterruptMode::Static) : JitOps::FastInterruptMode::None;
@@ -801,6 +802,9 @@ namespace dsp56k
 
 		profileEnd(lj);
 
+		// every path above ends in an unconditional exit, so nothing falls into the out-of-line code
+		emitColdCode();
+
 		m_currentJitBlockRuntimeData = nullptr;
 		return true;
 	}
@@ -886,6 +890,14 @@ namespace dsp56k
 		m_dspRegPool.reset();
 		m_scratchLocked = false;
 		m_shiftLocked = false;
+		m_coldCode.clear();
+	}
+
+	void JitBlock::emitColdCode()
+	{
+		for(const auto& code : m_coldCode)
+			code();
+		m_coldCode.clear();
 	}
 
 	JitBlock::JitBlockGenerating::JitBlockGenerating(JitBlockRuntimeData& _block): m_block(_block)

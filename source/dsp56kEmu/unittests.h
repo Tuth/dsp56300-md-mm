@@ -165,6 +165,12 @@ namespace  dsp56k
 		void rep_div_powerOfTwo();
 		void do_multi();
 		void jsr_rts();
+		void bitmodOnSR_deferredCCR();
+
+		void subr_leftAligned();
+		void normf_groundTruth();
+		void bitmodOnSR();
+		void ccrGroundTruth();
 
 		Peripherals56362 peripheralsX;
 		Peripherals56367 peripheralsY;

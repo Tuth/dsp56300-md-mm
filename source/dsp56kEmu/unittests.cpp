@@ -657,6 +657,8 @@ namespace dsp56k
 		// TFR is never saturated (3-10 Note)
 		// (raw TFR B,A = 0JJJd001 with JJJ 000, d 0: the test assembler turns "tfr" into RND)
 		sat(true , 0, 0x00800000000000, "tfr b,a", 0x00800000000000, false, 0x200001);
+
+		dsp.setSR(0);	// SM off again: the tests that follow assume it
 	}
 
 	void UnitTests::add()

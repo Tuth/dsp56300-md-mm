@@ -1258,6 +1258,7 @@ namespace dsp56k
 		sr_z_update(d);
 		sr_toggle(CCR_V, static_cast<uint64_t>(old) == (uint64_t(0x80000000000000) << g_aluShift));
 		sr_l_update_by_v();
+		alu_saturateSM(d);	// SR SM (DSP56300FM 3.2.3, Table 3-1)
 		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
 	}
 
@@ -1290,6 +1291,7 @@ namespace dsp56k
 		sr_z_update(d);
 		sr_toggle(CCR_V, overflow);
 		sr_l_update_by_v();
+		alu_saturateSM(d);	// SR SM (DSP56300FM 3.2.3, Table 3-1)
 		setCCRDirty(ab, d, CCR_S | CCR_E | CCR_U | CCR_N);
 	}
 

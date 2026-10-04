@@ -171,6 +171,7 @@ namespace  dsp56k
 		void normf_groundTruth();
 		void bitmodOnSR();
 		void ccrGroundTruth();
+		void arithmeticSaturation();
 
 		Peripherals56362 peripheralsX;
 		Peripherals56367 peripheralsY;

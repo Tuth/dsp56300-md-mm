@@ -44,6 +44,7 @@ namespace dsp56k
 		void setExactCycleDeadlineEnabled(bool _enabled) { m_exactCycleDeadlineEnabled = _enabled; }
 		bool usesExactCycleDeadline() const;
 		uint32_t getNextCycleDeadline() const { return m_nextCycleDeadline; }
+		uint64_t perfExecCount() const { return m_perfExecCount; }	// perf counter: exec() calls
 		bool setEsaiCounter(const Esxi* _esai, int _counter)
 		{
 			return setEsaiCounter(_esai, _counter, _counter);
@@ -79,6 +80,7 @@ namespace dsp56k
 		const uint64_t* m_dspInstructionCounter = nullptr;
 		uint64_t m_lastClock = 0;
 		uint32_t m_nextCycleDeadline = 0;
+		uint64_t m_perfExecCount = 0;
 		uint32_t m_cyclesPerSample = 2133;				// estimated cycles per sample before calculated
 
 		ClockSource m_clockSource = ClockSource::Instructions;

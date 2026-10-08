@@ -204,6 +204,7 @@ namespace dsp56k
 	void InstructionCache::pflush()
 	{
 		// flush the entire cache, including locked sectors; all lock bits are cleared
+		++m_perfPflushCount;
 		for( TSectorIdx s=0; s<eNumSectors; ++s )
 			flushSector( s );
 	}

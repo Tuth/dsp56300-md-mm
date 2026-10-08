@@ -17,6 +17,7 @@ namespace dsp56k
 
 	uint32_t EsxiClock::exec() noexcept
 	{
+		++m_perfExecCount;
 		auto scheduleDelay = [this](const uint32_t _delay)
 		{
 			m_nextCycleDeadline = _delay;

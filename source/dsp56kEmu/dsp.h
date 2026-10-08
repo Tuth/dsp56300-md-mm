@@ -182,6 +182,8 @@ namespace dsp56k
 	public:
 				DSP								( Memory& _memory, IPeripherals* _pX, IPeripherals* _pY );
 
+		uint64_t perfPflushCount						() const { return cache.perfPflushCount(); }	// perf counter
+
 		void 	resetHW							();
 		void 	resetSW							();
 

@@ -53,6 +53,8 @@ namespace dsp56k
 
 		void	pflushun	();
 
+		uint64_t perfPflushCount() const { return m_perfPflushCount; }	// perf counter: PFLUSH executions
+
 		TWord	fetch		( Memory& _mem, TWord _address, bool burstEnabled );
 
 		TWord	readMemory	( TSectorIdx _sector, TWord _wordIdx ) const
@@ -79,6 +81,8 @@ namespace dsp56k
 	private:
 
 		void flushSector( TSectorIdx s );
+
+		uint64_t m_perfPflushCount = 0;
 
 		TSectorIdx	findSectorByAddress( TWord _addr ) const
 		{

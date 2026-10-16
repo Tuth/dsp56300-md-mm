@@ -68,6 +68,7 @@ namespace dsp56k
 
 		parallelMoveXY();
 		boundedDispatch();
+		compilationTiming();
 	}
 
 	void JitUnittests::runtimeUnnormalizedFlag()
@@ -228,6 +229,44 @@ namespace dsp56k
 	{
 		for(size_t i=0; i<_count; ++i)
 			block->asm_().nop();
+	}
+
+	void JitUnittests::compilationTiming()
+	{
+		dsp.resetHW();
+		constexpr TWord pc = 0x500;
+		auto next = emitToMemory("nop", pc);
+		emitToMemory("bra >$500", next);
+		auto saved = dsp.getJit().getConfig();
+		auto config = saved;
+		uint64_t begins = 0, ends = 0;
+		const auto cycles = dsp.getCycles();
+		bool timingEnabled = true;
+		config.beginCompilationTiming = [&]() -> uint64_t
+		{
+			verify(dsp.getCycles() == cycles);
+			++begins;
+			return timingEnabled ? 1 : 0;
+		};
+		config.endCompilationTiming = [&](uint64_t token)
+		{
+			verify(token == 1 && dsp.getCycles() == cycles);
+			++ends;
+		};
+		dsp.getJit().setConfig(config);
+		dsp.getJit().create(pc, false);
+		verify(begins > 0 && ends == begins);
+		const auto compiled = begins;
+		dsp.setPC(pc);
+		dsp.execUntilCycles(dsp.getCycles() + 32);
+		verify(begins == compiled); // Cached execution is outside the hooks.
+		dsp.resetHW();
+		dsp.getJit().destroy(pc);
+		timingEnabled = false;
+		const auto completed = ends;
+		dsp.getJit().create(pc, false);
+		verify(ends == completed); // Zero token suppresses end/clock work.
+		dsp.getJit().setConfig(saved);
 	}
 
 	void JitUnittests::boundedDispatch()

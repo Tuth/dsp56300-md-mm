@@ -373,6 +373,18 @@ namespace dsp56k
 
 	JitBlockRuntimeData* JitBlockChain::emit(TWord _pc)
 	{
+		const auto& timingConfig = m_jit.getConfig();
+		struct CompilationTimingScope
+		{
+			const JitConfig& config;
+			uint64_t token;
+			~CompilationTimingScope()
+			{
+				if(token) config.endCompilationTiming(token);
+			}
+		} timing{timingConfig, timingConfig.beginCompilationTiming && timingConfig.endCompilationTiming
+			? timingConfig.beginCompilationTiming() : 0};
+
 		if(jitPcTraceEnabled())
 			std::fprintf(stderr, "[DSPJIT] jit=%p mode=%08x event=emit pc=%06x\n",
 				static_cast<void*>(&m_jit), m_mode.get(), _pc);

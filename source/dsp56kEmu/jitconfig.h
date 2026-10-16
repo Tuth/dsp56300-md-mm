@@ -40,5 +40,11 @@ namespace dsp56k
 
 		// retrieves a JitConfig for a specific PC. If null, the global default config is used
 		std::function<std::optional<JitConfig>(TWord)> getBlockConfig;
+
+		// Optional host timing hooks around code generation/installation, excluding
+		// execution of the resulting block. A zero token disables the end hook.
+		// Child block generation can nest; the host must account for that.
+		std::function<uint64_t()> beginCompilationTiming;
+		std::function<void(uint64_t)> endCompilationTiming;
 	};
 }
